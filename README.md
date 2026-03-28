@@ -21,12 +21,16 @@
    ```yaml
    services:
      app:
-       build: .
+       build:
+         context: .
+         dockerfile: Dockerfile
        environment:
          - PORT=${PORT:-3000}
        ports:
-         - "${PORT:-3000}:3000"
+         - "${PORT:-3000}:${PORT:-3000}"
        healthcheck:
+         # '$$' escapes '$' for Compose so the container shell resolves PORT at runtime.
+         # Ensure your image contains `wget` (or replace this check with `curl`).
          test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:$${PORT:-3000}/healthz || exit 1"]
          interval: 30s
          timeout: 5s
@@ -48,16 +52,19 @@
 - Replace Telegram-based notifications with a Discord incoming webhook.
 - Store the webhook in Coolify as `DISCORD_WEBHOOK_URL` (secret).
 - Send deployment/build alerts from your CI workflow, Coolify post-deploy hook, or deployment script using `discord.py`:
-  > Install dependency first: `pip install discord.py`
+  > Install dependency for the notification script (Python 3.8+): `pip install "discord.py>=2.0.0"`
   ```python
   import os
-  import discord
+  from discord import SyncWebhook
 
   webhook_url = os.environ.get("DISCORD_WEBHOOK_URL")
-  if not webhook_url:
-      raise RuntimeError("DISCORD_WEBHOOK_URL is not set")
+  if not webhook_url or not webhook_url.strip():
+      raise RuntimeError(
+          "DISCORD_WEBHOOK_URL environment variable is missing or empty. "
+          "Set it in your Coolify environment variables."
+      )
 
-  webhook = discord.SyncWebhook.from_url(webhook_url)
+  webhook = SyncWebhook.from_url(webhook_url)
   webhook.send("✅ Deployment succeeded")
   ```
 - Optional: include environment, commit SHA, and health check status in the Discord message body.

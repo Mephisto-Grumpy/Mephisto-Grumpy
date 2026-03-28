@@ -1,11 +1,15 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     environment:
       - PORT=${PORT:-3000}
     ports:
-      - "${PORT:-3000}:3000"
+      - "${PORT:-3000}:${PORT:-3000}"
     healthcheck:
+      # '$$' escapes '$' for Compose so the container shell resolves PORT at runtime.
+      # Ensure your image contains `wget` (or replace this check with `curl`).
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:$${PORT:-3000}/healthz || exit 1"]
       interval: 30s
       timeout: 5s
